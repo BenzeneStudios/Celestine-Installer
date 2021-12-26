@@ -16,6 +16,9 @@ import java.util.Arrays;
 import java.util.Locale;
 
 public class CelestineInstaller {
+	private static JTextField minecraftLocation;
+	private static JTextField celestineLocation;
+
 	public static void main(String[] args) {
 		FlatDarkLaf.setup();
 
@@ -38,7 +41,23 @@ public class CelestineInstaller {
 
 	private static JPanel createPanel() {
 		JPanel panel = new JPanel();
+		panel.setLayout(new BorderLayout());
 		panel.setPreferredSize(new Dimension(500, 300));
+
+		// add fields
+		Panel fields = new Panel(new FlowLayout(FlowLayout.CENTER));
+		(minecraftLocation = new JTextField()).setText(findDefaultInstallDir("minecraft").toString());
+		(celestineLocation = new JTextField()).setText(findDefaultInstallDir("celestine").toString());
+
+		fields.add(minecraftLocation);
+		fields.add(celestineLocation);
+		fields.setPreferredSize(new Dimension(500, 250));
+		panel.add(fields, BorderLayout.CENTER);
+
+		// add button
+		Button install = new Button("Install");
+		panel.add(install, BorderLayout.SOUTH);
+
 		return panel;
 	}
 
