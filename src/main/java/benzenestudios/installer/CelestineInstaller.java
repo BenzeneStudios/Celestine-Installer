@@ -9,14 +9,16 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.Writer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Vector;
 
 public class CelestineInstaller {
+	private static final String VERSION = "0.1.0"; // TODO REMEMBER TO CHANGE THIS EACH VERSION ALONG WITH MAVEN
 	private static JTextField minecraftLocation;
+	private static JComboBox<String> minecraftVersion;
 	private static JTextField celestineLocation;
 
 	public static void main(String[] args) {
@@ -39,26 +41,103 @@ public class CelestineInstaller {
 		}
 	}
 
-	private static JPanel createPanel() {
+	private static JPanel createPanel() throws IOException {
+		String comicSans = findTypeFace(".*Comic.*Sans.*(?i)");
+
 		JPanel panel = new JPanel();
 		panel.setLayout(new BorderLayout());
-		panel.setPreferredSize(new Dimension(500, 300));
+
+		// add space
+		JPanel header = new JPanel();
+		header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+
+		JLabel image = new JLabel(new ImageIcon(getIncludedImage("celestine_icon.png")));
+		image.setAlignmentX(Component.CENTER_ALIGNMENT);
+		JLabel text = new JLabel("Celestine Installer " + VERSION);
+		text.setFont(new Font(comicSans, Font.PLAIN, 20));
+		text.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+		header.add(image);
+		header.add(text);
+		panel.add(header, BorderLayout.NORTH);
 
 		// add fields
-		Panel fields = new Panel(new FlowLayout(FlowLayout.CENTER));
+		JPanel fields = new JPanel(new GridBagLayout());
+		fields.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+
+		JLabel minecraftVersionText = new JLabel("Minecraft Version");
+		minecraftVersionText.setFont(new Font(comicSans, Font.PLAIN, 16));
+
+		minecraftVersion = new JComboBox<>(new Vector<>(Arrays.asList("1.17.1")));
+
+		JLabel minecraftLocationText = new JLabel("Minecraft Location");
+		//DEBUG: minecraftLocationText.setBorder(BorderFactory.createDashedBorder(Color.GRAY));
+		minecraftLocationText.setFont(new Font(comicSans, Font.PLAIN, 16));
+
 		(minecraftLocation = new JTextField()).setText(findDefaultInstallDir("minecraft").toString());
+
+		JLabel celestineLocationText = new JLabel("Profile Location");
+		celestineLocationText.setFont(new Font(comicSans, Font.PLAIN, 16));
+
 		(celestineLocation = new JTextField()).setText(findDefaultInstallDir("celestine").toString());
 
-		fields.add(minecraftLocation);
-		fields.add(celestineLocation);
-		fields.setPreferredSize(new Dimension(500, 250));
+		fields.add(minecraftVersionText, createTextConstraints(0));
+		fields.add(minecraftVersion, createInputConstraints(0));
+		fields.add(minecraftLocationText, createTextConstraints(1));
+		fields.add(minecraftLocation, createInputConstraints(1));
+		fields.add(celestineLocationText, createTextConstraints(2));
+		fields.add(celestineLocation, createInputConstraints(2));
+		fields.setPreferredSize(new Dimension(500, 150));
 		panel.add(fields, BorderLayout.CENTER);
 
 		// add button
-		Button install = new Button("Install");
-		panel.add(install, BorderLayout.SOUTH);
+		JButton install = new JButton("Install");
+		install.setPreferredSize(new Dimension(500 - 60, 50));
+
+		JPanel formattedInstall = new JPanel();
+		formattedInstall.setBorder(BorderFactory.createEmptyBorder(5, 30, 5, 30));
+
+		formattedInstall.add(install);
+		panel.add(formattedInstall, BorderLayout.SOUTH);
 
 		return panel;
+	}
+
+	private static Insets TEXT_INSETS = new Insets(5, 0, 5, 5);
+	private static Insets INPUT_INSETS = new Insets(5, 5, 5, 0);
+
+	private static GridBagConstraints createTextConstraints(int index) {
+		GridBagConstraints result = new GridBagConstraints();
+		result.gridx = 0;
+		result.gridy = index;
+		result.anchor = GridBagConstraints.WEST;
+		result.fill = GridBagConstraints.BOTH;
+		result.gridwidth = 1;
+		result.gridheight = 1;
+		result.insets = TEXT_INSETS;
+		return result;
+	}
+
+	private static GridBagConstraints createInputConstraints(int index) {
+		GridBagConstraints result = new GridBagConstraints();
+		result.gridx = 1;
+		result.gridy = index;
+		result.anchor = GridBagConstraints.EAST;
+		result.fill = GridBagConstraints.HORIZONTAL;
+		result.gridwidth = 1;
+		result.gridheight = 1;
+		result.insets = INPUT_INSETS;
+		return result;
+	}
+
+
+	private static String findTypeFace(String regex) {
+		for (String font : GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames(Locale.ENGLISH)) {
+			if (font.matches(regex)) return font;
+		}
+
+		System.out.println("Couldn't find font matching " + regex);
+		return regex; // will just revert to default if can't find it
 	}
 
 	private static BufferedImage getIncludedImage(String location) throws IOException {
