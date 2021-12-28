@@ -1,18 +1,32 @@
 package benzenestudios.installer;
 
 import com.formdev.flatlaf.FlatDarkLaf;
+import com.google.gson.Gson;
+import org.apache.commons.codec.binary.Base64;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.BevelBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import java.util.Vector;
 
 public class CelestineInstaller {
@@ -41,6 +55,44 @@ public class CelestineInstaller {
 		}
 	}
 
+	private static void addProfile() {
+		System.out.println("Loading Profiles");
+		LauncherProfiles profiles;
+
+		try (FileReader reader = new FileReader(new File(new File(minecraftLocation.getText()), "launcher_profiles.json"))) {
+			profiles = new Gson().fromJson(reader, LauncherProfiles.class);
+		} catch (IOException e) {
+			throw new UncheckedIOException("Exception loading launcher profiles", e);
+		}
+
+		System.out.println("Adding profile");
+
+		String version = (String) minecraftVersion.getSelectedItem();
+
+		Map<String, Object> profile = new LinkedHashMap<>(); // do I need to preserve order?
+		profile.put("lastVersionId", "fabric-loader-0.12.12-1.17.1");
+		profile.put("created", Instant.now().toString()); // dateTtimeZ
+
+		// vanilla seems to use direct png image data as custom icons
+		try (InputStream stream = CelestineInstaller.class.getClassLoader().getResourceAsStream("celestine_icon.png")) {
+			profile.put("item", Base64.encodeBase64String(stream.readAllBytes()));
+		} catch (IOException e) {
+			throw new UncheckedIOException("Exception reading icon as byte stream", e);
+		}
+
+		profile.put("name", "Celestine " + version);
+		profile.put("type", "custom");
+
+		String gameDir = celestineLocation.getText();
+		new File(gameDir).mkdir();
+
+		profile.put("gameDir", gameDir);
+
+		profiles.profiles.put(UUID.nameUUIDFromBytes(("celestine_" + version).getBytes(StandardCharsets.UTF_8)).toString().replace("-", ""), profile);
+		System.out.println(profiles.profiles);
+
+		System.out.println("Writing Profiles");
+	}
 	private static JPanel createPanel() throws IOException {
 		String comicSans = findTypeFace(".*Comic.*Sans.*(?i)");
 
@@ -93,6 +145,7 @@ public class CelestineInstaller {
 		// add button
 		JButton install = new JButton("Install");
 		install.setPreferredSize(new Dimension(500 - 60, 50));
+		install.addActionListener(e -> addProfile());
 
 		JPanel formattedInstall = new JPanel();
 		formattedInstall.setBorder(BorderFactory.createEmptyBorder(5, 30, 5, 30));
