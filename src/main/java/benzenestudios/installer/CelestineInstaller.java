@@ -12,6 +12,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
@@ -55,27 +56,34 @@ public class CelestineInstaller {
 		}
 	}
 
-	private static void addProfile() {
+	private static void installFabricIfNotPresent(String version) {
+
+	}
+
+	private static void addProfile(String version) {
 		System.out.println("Loading Profiles");
+		Gson gson = new Gson();
+		File profilesFile = new File(new File(minecraftLocation.getText()), "launcher_profiles.json");
+
 		LauncherProfiles profiles;
 
-		try (FileReader reader = new FileReader(new File(new File(minecraftLocation.getText()), "launcher_profiles.json"))) {
-			profiles = new Gson().fromJson(reader, LauncherProfiles.class);
+		// == PROFILE READ ==
+		try (FileReader reader = new FileReader(profilesFile)) {
+			profiles = gson.fromJson(reader, LauncherProfiles.class);
 		} catch (IOException e) {
 			throw new UncheckedIOException("Exception loading launcher profiles", e);
 		}
 
+		// == CREATE PROFILE ==
 		System.out.println("Adding profile");
 
-		String version = (String) minecraftVersion.getSelectedItem();
-
-		Map<String, Object> profile = new LinkedHashMap<>(); // do I need to preserve order?
+		Map<String, Object> profile = new HashMap<>(); // do I need to preserve order?
 		profile.put("lastVersionId", "fabric-loader-0.12.12-1.17.1");
 		profile.put("created", Instant.now().toString()); // dateTtimeZ
 
 		// vanilla seems to use direct png image data as custom icons
 		try (InputStream stream = CelestineInstaller.class.getClassLoader().getResourceAsStream("celestine_icon.png")) {
-			profile.put("item", Base64.encodeBase64String(stream.readAllBytes()));
+			profile.put("icon", "data:image/png;base64," + Base64.encodeBase64String(stream.readAllBytes()));
 		} catch (IOException e) {
 			throw new UncheckedIOException("Exception reading icon as byte stream", e);
 		}
@@ -87,12 +95,19 @@ public class CelestineInstaller {
 		new File(gameDir).mkdir();
 
 		profile.put("gameDir", gameDir);
-
 		profiles.profiles.put(UUID.nameUUIDFromBytes(("celestine_" + version).getBytes(StandardCharsets.UTF_8)).toString().replace("-", ""), profile);
-		System.out.println(profiles.profiles);
+		//System.out.println(profile);
 
+		// == PROFILE WRITE ==
 		System.out.println("Writing Profiles");
+
+		try (FileWriter writer = new FileWriter(profilesFile)) {
+			gson.toJson(profiles, writer);
+		} catch (IOException e) {
+			throw new UncheckedIOException("Exception writing launcher profiles", e);
+		}
 	}
+
 	private static JPanel createPanel() throws IOException {
 		String comicSans = findTypeFace(".*Comic.*Sans.*(?i)");
 
@@ -145,7 +160,13 @@ public class CelestineInstaller {
 		// add button
 		JButton install = new JButton("Install");
 		install.setPreferredSize(new Dimension(500 - 60, 50));
-		install.addActionListener(e -> addProfile());
+		install.addActionListener(e -> {
+			String version = (String) minecraftVersion.getSelectedItem();
+
+			installFabricIfNotPresent(version);
+			addProfile(version);
+			JOptionPane.showMessageDialog(panel, "Celestine for " + version + "has been installed.", "Operation Complete", JOptionPane.INFORMATION_MESSAGE);
+		});
 
 		JPanel formattedInstall = new JPanel();
 		formattedInstall.setBorder(BorderFactory.createEmptyBorder(5, 30, 5, 30));
